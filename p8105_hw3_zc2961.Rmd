@@ -39,8 +39,10 @@ noaa_missing =
     prop_tmax_na = mean(is.na(tmax)),
     prop_tmin_na = mean(is.na(tmin))
   )
+
+noaa_var_names = paste(sprintf("`%s`", names(ny_noaa)), collapse = ", ")
 ```
-The `ny_noaa` dataset contains daily weather observations from `r n_distinct(ny_noaa$id)` New York state weather stations spanning from `r min(ny_noaa$date)` to `r max(ny_noaa$date)`, with `r format(nrow(ny_noaa), big.mark = ",")` rows and `r ncol(ny_noaa)` columns. Key variables include weather station identifier (`id`), observation date (`date`), precipitation in tenths of millimeters (`prcp`), snowfall in millimeters (`snow`), snow depth in millimeters (`snwd`), and maximum and minimum temperatures in tenths of degrees Celsius (`tmax` and `tmin`). Missing data is a substantial issue because many stations only record a subset of meteorological variables: `tmax` and `tmin` are each missing in `r sprintf("%.2f%%", 100 * noaa_missing$prop_tmax_na)` and `r sprintf("%.2f%%", 100 * noaa_missing$prop_tmin_na)` of observations, `snwd` is missing in `r sprintf("%.2f%%", 100 * noaa_missing$prop_snwd_na)`, `snow` is missing in `r sprintf("%.2f%%", 100 * noaa_missing$prop_snow_na)`, and `prcp` is missing in `r sprintf("%.2f%%", 100 * noaa_missing$prop_prcp_na)`.
+The `ny_noaa` dataset contains daily weather observations from `r n_distinct(ny_noaa$id)` New York state weather stations spanning from `r min(ny_noaa$date)` to `r max(ny_noaa$date)`, with `r format(nrow(ny_noaa), big.mark = ",")` rows and `r ncol(ny_noaa)` columns (`r noaa_var_names`). Key variables include weather station identifier (`id`), observation date (`date`), precipitation in tenths of millimeters (`prcp`), snowfall in millimeters (`snow`), snow depth in millimeters (`snwd`), and maximum and minimum temperatures in tenths of degrees Celsius (`tmax` and `tmin`). Missing data is a substantial issue because many stations only record a subset of meteorological variables: `tmax` and `tmin` are missing in `r sprintf("%.2f%%", 100 * noaa_missing$prop_tmax_na)` and `r sprintf("%.2f%%", 100 * noaa_missing$prop_tmin_na)` of observations, `snwd` is missing in `r sprintf("%.2f%%", 100 * noaa_missing$prop_snwd_na)`, `snow` is missing in `r sprintf("%.2f%%", 100 * noaa_missing$prop_snow_na)`, and `prcp` is missing in `r sprintf("%.2f%%", 100 * noaa_missing$prop_prcp_na)`.
 
 ```{r}
 noaa_df =
@@ -63,6 +65,8 @@ snow_top =
   count(snow, sort = TRUE) |>
   slice_head(n = 5)
 
+next_snow_vals = paste(sprintf("`%d` mm", snow_top$snow[2:5]), collapse = ", ")
+
 kable(
   snow_top,
   col.names = c("Snowfall (mm)", "Observations"),
@@ -70,7 +74,7 @@ kable(
 )
 ```
 
-I separated `date` into integer `year`, `month`, and `day` variables, and converted `prcp` from tenths of millimeters to millimeters (`mm`) as well as `tmax` and `tmin` from tenths of degrees Celsius to degrees Celsius (`°C`), so that precipitation, snowfall, and snow depth are all measured in `mm` and temperatures in `°C`. For snowfall, the most commonly observed value is `0` mm (`r format(snow_top$n[1], big.mark = ",")` observations), because snow does not fall on the vast majority of days across the year in New York State. The next most common values are `25` mm, `13` mm, `51` mm, and `76` mm, which correspond to historical measurements recorded in imperial inches (1.0 inch = 25.4 mm, 0.5 inch = 12.7 mm, 2.0 inches = 50.8 mm, and 3.0 inches = 76.2 mm) and subsequently rounded to the nearest millimeter.
+I separated `date` into integer `year`, `month`, and `day` variables, and converted `prcp` from tenths of millimeters to millimeters (`mm`) as well as `tmax` and `tmin` from tenths of degrees Celsius to degrees Celsius (`°C`), so that precipitation, snowfall, and snow depth are all measured in `mm` and temperatures in `°C`. For snowfall, the most commonly observed value is `` `r snow_top$snow[1]` `` mm (`r format(snow_top$n[1], big.mark = ",")` observations), because snow does not fall on most days of the year in New York State. The next most common values are `r next_snow_vals`, which come from original measurements recorded in inches (1, 0.5, 2, and 3 inches) and rounded to the nearest millimeter after unit conversion.
 
 ```{r}
 jan_july_tmax =
@@ -101,7 +105,7 @@ ggplot(jan_july_tmax, aes(x = year, y = mean_tmax, group = id)) +
   )
 ```
 
-The two-panel plot shows a clear seasonal separation: average maximum temperatures in January generally fluctuate between -10 °C and 10 °C (centered near 0 °C), whereas July average maximum temperatures stay much warmer and more tightly clustered between 20 °C and 32 °C (centered near 27 °C). Across stations, year-to-year fluctuations move in parallel, reflecting statewide warm and cold years. Several notable outliers appear in both panels, most prominently an abnormally cold July station-year observation in 1988 (`USC00308962` at 13.95 °C) and an extremely cold January station-year observation in 1982 (`USC00301723` at -13.44 °C).
+The two-panel plot shows a clear seasonal separation: average maximum temperatures in January generally fluctuate between -10 °C and 10 °C (centered near 0 °C), whereas July average maximum temperatures stay much warmer and more tightly clustered between 20 °C and 32 °C (centered near 27 °C). Across stations, year-to-year fluctuations move in parallel, reflecting statewide warm and cold years. There are also a few clear outliers in both panels, such as a station in July 1988 with an average maximum temperature around 14 °C and a station in January 1982 dropping below -13 °C.
 
 ```{r fig.height=8}
 tmax_tmin_plot =
@@ -133,13 +137,13 @@ snow_dist_plot =
 tmax_tmin_plot / snow_dist_plot
 ```
 
-In panel (i), a hexagonal heatmap of `tmax` versus `tmin` avoids severe overplotting across over 1.46 million complete pairs and reveals a tight positive linear relationship, with the highest density of daily observations concentrated between `tmin` of -5 °C to 15 °C and `tmax` of 5 °C to 25 °C. In panel (ii), the yearly ridge density plots of snowfall values between 0 and 100 mm remain remarkably consistent across all 30 years and exhibit distinct multimodal peaks near 13 mm, 25 mm, 51 mm, and 76 mm, further confirming the unit-conversion rounding from quarter-, half-, and whole-inch snowfall recordings.
+In panel (i), a hexagonal heatmap of `tmax` versus `tmin` avoids overplotting across `r format(sum(!is.na(noaa_df$tmax) & !is.na(noaa_df$tmin)), big.mark = ",")` complete pairs and shows a clear positive linear relationship, with most daily observations concentrated between `tmin` of -5 °C to 15 °C and `tmax` of 5 °C to 25 °C. In panel (ii), the yearly ridge density plots of snowfall values between 0 and 100 mm stay very consistent across all 30 years, with visible peaks around 13 mm, 25 mm, 51 mm, and 76 mm due to rounding from inches.
 
 # Problem 2
 ```{r}
 covar_raw =
   read_csv(
-    "data/nhanes_covar.csv",
+    "Data/nhanes_covar.csv",
     skip = 4,
     na = c("", "NA"),
     col_types = cols(
@@ -154,7 +158,7 @@ covar_raw =
 
 accel_raw =
   read_csv(
-    "data/nhanes_accel.csv",
+    "Data/nhanes_accel.csv",
     col_types = cols(
       .default = col_double(),
       SEQN = col_integer()
@@ -228,7 +232,7 @@ ggplot(covar_df, aes(x = education, y = age, fill = sex)) +
   )
 ```
 
-The largest subgroup is participants with more than a high school education (56 men and 59 women), with balanced sex counts in both the "Less than high school" (27 men, 28 women) and "More than high school" categories, whereas men outnumber women in the "High school equivalent" group (35 men vs. 23 women). The age distribution plot indicates that participants in the "More than high school" group are substantially younger overall (especially women, whose median age is around 41 years) compared with the other two education categories. In the "High school equivalent" category, women tend to be older than men, while in "Less than high school" both men and women skew toward older ages (median near 60 years).
+From the table, the "More than high school" group has the largest number of participants, and the numbers of men and women are fairly balanced in both the "Less than high school" and "More than high school" categories, whereas men outnumber women in the "High school equivalent" group. The age distribution plot shows that participants in the "More than high school" group are generally younger overall (especially women, whose median age is around 40 years) compared with the other two education categories. In the "High school equivalent" category, women tend to be older than men, while in "Less than high school" both men and women skew toward older ages (with medians near 60 years).
 
 ```{r}
 total_activity_df =
@@ -251,7 +255,7 @@ ggplot(total_activity_df, aes(x = age, y = total_activity, color = sex)) +
   )
 ```
 
-Across all three education levels, total daily physical activity declines steadily with advancing age. In the "Less than high school" group, men and women exhibit comparable activity levels with a steep decline after age 60, whereas in both the "High school equivalent" and "More than high school" groups, women consistently record higher average total daily MIMS values than men of the same age. Additionally, participants in the "High school equivalent" category show a pronounced peak in total activity around ages 35 to 45 before declining at older ages.
+Across all three education levels, total daily physical activity decreases with age. In the "Less than high school" group, men and women have similar activity levels with a steeper drop after age 60, whereas in both the "High school equivalent" and "More than high school" groups, women consistently record higher average total daily MIMS values than men of the same age. Additionally, participants in the "High school equivalent" category show a noticeable peak in total activity around ages 35 to 45 before declining at older ages.
 
 
 ```{r}
@@ -277,7 +281,7 @@ hourly_activity_plot =
 hourly_activity_plot
 ```
 
-The 24-hour activity profiles follow a distinct circadian rhythm across all three education groups: activity drops to its lowest level during overnight sleeping hours (between midnight and 5:00 AM), rises sharply between 6:00 AM and 9:00 AM, remains elevated throughout the daytime (9:00 AM to 6:00 PM), and tapers off steadily during the evening. In the "High school equivalent" and "More than high school" panels, women maintain noticeably higher daytime MIMS levels than men from mid-morning through early evening, whereas in the "Less than high school" group, men and women track closely throughout the day with slightly higher midday peaks among men.
+The 24-hour activity profiles show a clear daily pattern across all three education groups: activity is lowest overnight between midnight and 5:00 AM, rises sharply between 6:00 AM and 9:00 AM, stays high throughout the daytime (9:00 AM to 6:00 PM), and drops off during the evening. In the "High school equivalent" and "More than high school" panels, women maintain noticeably higher daytime MIMS levels than men from mid-morning through early evening, whereas in the "Less than high school" group, men and women follow very similar curves throughout the day.
 
 # Problem 3
 ```{r}
@@ -303,10 +307,10 @@ import_citibike = function(file_path, year_val, month_val) {
 
 citibike_df =
   bind_rows(
-    import_citibike("data/citibike/Jan 2020 Citi.csv", 2020, "January"),
-    import_citibike("data/citibike/July 2020 Citi.csv", 2020, "July"),
-    import_citibike("data/citibike/Jan 2024 Citi.csv", 2024, "January"),
-    import_citibike("data/citibike/July 2024 Citi.csv", 2024, "July")
+    import_citibike("Data/citibike/Jan 2020 Citi.csv", 2020, "January"),
+    import_citibike("Data/citibike/July 2020 Citi.csv", 2020, "July"),
+    import_citibike("Data/citibike/Jan 2024 Citi.csv", 2024, "January"),
+    import_citibike("Data/citibike/July 2024 Citi.csv", 2024, "July")
   ) |>
   mutate(
     weekdays = factor(
@@ -328,10 +332,11 @@ citibike_df =
       labels = c("Casual", "Member")
     )
   )
+
 citibike_var_names = paste(sprintf("`%s`", names(citibike_df)), collapse = ", ")
 ```
 
-I imported the four Citi Bike files, standardized their column names, added `year` and `month` identifiers, and encoded `weekdays`, `rideable_type`, and `member_casual` as structured factors. The combined dataset contains `r format(nrow(citibike_df), big.mark = ",")` rides and `r ncol(citibike_df)` variables: `r citibike_var_names`. Across all records, `start_station_name` is missing in `r sum(is.na(citibike_df$start_station_name))` rides and `end_station_name` is missing in `r sum(is.na(citibike_df$end_station_name))` rides, while all other variables are complete.
+I imported the four Citi Bike files, standardized their column names, added `year` and `month` identifiers, and encoded `weekdays`, `rideable_type`, and `member_casual` as factors. The combined dataset contains `r format(nrow(citibike_df), big.mark = ",")` rides and `r ncol(citibike_df)` variables: `r citibike_var_names`. Across all records, `start_station_name` is missing in `r sum(is.na(citibike_df$start_station_name))` rides and `end_station_name` is missing in `r sum(is.na(citibike_df$end_station_name))` rides, while all other variables are complete.
 
 ```{r}
 rides_summary_table =
@@ -343,13 +348,19 @@ rides_summary_table =
   ) |>
   mutate(Total = Casual + Member)
 
-pct_jul20 = rides_summary_table |> filter(year == "2020", month == "July") |> mutate(pct = Member / Total * 100) |> pull(pct)
-pct_jan20 = rides_summary_table |> filter(year == "2020", month == "January") |> mutate(pct = Member / Total * 100) |> pull(pct)
+get_stat = function(yr, mo, col) {
+  rides_summary_table |>
+    filter(year == yr, month == mo) |>
+    pull({{ col }})
+}
 
-cas_jan20 = rides_summary_table |> filter(year == "2020", month == "January") |> pull(Casual)
-cas_jul20 = rides_summary_table |> filter(year == "2020", month == "July") |> pull(Casual)
-cas_jan24 = rides_summary_table |> filter(year == "2024", month == "January") |> pull(Casual)
-cas_jul24 = rides_summary_table |> filter(year == "2024", month == "July") |> pull(Casual)
+pct_jul20 = get_stat("2020", "July", Member) / get_stat("2020", "July", Total) * 100
+pct_jan20 = get_stat("2020", "January", Member) / get_stat("2020", "January", Total) * 100
+
+cas_jan20 = get_stat("2020", "January", Casual)
+cas_jul20 = get_stat("2020", "July", Casual)
+cas_jan24 = get_stat("2024", "January", Casual)
+cas_jul24 = get_stat("2024", "July", Casual)
 
 kable(
   rides_summary_table,
@@ -359,7 +370,7 @@ kable(
 )
 ```
 
-Ridership expanded substantially between 2020 and 2024 and exhibits strong seasonal patterns: July ride counts are roughly double to triple those in January within the same year. Citi Bike members account for the clear majority of rides in every period (ranging from `r sprintf("%.1f", pct_jul20)`% in July 2020 to `r sprintf("%.1f", pct_jan20)`% in January 2020), while casual ridership surges much more dramatically during warm summer months (growing from `r format(cas_jan20, big.mark = ",")` rides in January 2020 to `r format(cas_jul20, big.mark = ",")` in July 2020, and from `r format(cas_jan24, big.mark = ",")` in January 2024 to `r format(cas_jul24, big.mark = ",")` in July 2024).
+Ridership grew substantially between 2020 and 2024 and shows a strong seasonal pattern: July ride counts are roughly double to triple those in January within the same year. Citi Bike members account for the majority of rides in every period (ranging from `r sprintf("%.1f", pct_jul20)`% in July 2020 to `r sprintf("%.1f", pct_jan20)`% in January 2020), while casual ridership increases much more sharply in the summer (growing from `r format(cas_jan20, big.mark = ",")` rides in January 2020 to `r format(cas_jul20, big.mark = ",")` in July 2020, and from `r format(cas_jan24, big.mark = ",")` in January 2024 to `r format(cas_jul24, big.mark = ",")` in July 2024).
 
 ```{r}
 top5_july2024_stations =
@@ -368,9 +379,17 @@ top5_july2024_stations =
   count(start_station_name, name = "n_rides", sort = TRUE) |>
   slice_head(n = 5)
 
-station_strings = sprintf("`%s` (%d rides)", top5_july2024_stations$start_station_name, top5_july2024_stations$n_rides)
+station_strings = sprintf(
+  "`%s` (%d rides)",
+  top5_july2024_stations$start_station_name,
+  top5_july2024_stations$n_rides
+)
 
-top5_stations_text = paste0(paste(station_strings[1:4], collapse = ", "), ", and ", station_strings[5])
+top5_stations_text = paste0(
+  paste(station_strings[1:4], collapse = ", "),
+  ", and ",
+  station_strings[5]
+)
 
 kable(
   top5_july2024_stations,
@@ -379,5 +398,46 @@ kable(
 )
 ```
 
-In July 2024, the five most popular starting stations are `r top5_stations_text`, reflecting high demand along the Hudson River Greenway, major commercial corridors, and transit hubs.
+In July 2024, the five most popular starting stations are `r top5_stations_text`.
 
+```{r}
+median_duration_df =
+  citibike_df |>
+  group_by(year, month, weekdays) |>
+  summarise(
+    median_duration = median(duration, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+ggplot(median_duration_df, aes(x = weekdays, y = median_duration, color = month, group = month)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2.2) +
+  facet_grid(. ~ year) +
+  labs(
+    title = "Median Ride Duration by Day of Week, Month, and Year",
+    x = "Day of the Week",
+    y = "Median Ride Duration (Minutes)",
+    color = "Month"
+  ) +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+```
+
+Median ride duration is consistently longer in July than in January across both 2020 and 2024, and peaks noticeably on weekends (Saturday and Sunday) compared with weekdays (Monday through Friday), as riders take more leisure trips on weekends and in summer. Moreover, overall median ride durations in 2024 are shorter than in 2020 (especially in July, dropping from around 13–16.5 minutes in July 2020 to 10–12 minutes in July 2024).
+
+```{r}
+citibike_df |>
+  filter(year == "2024") |>
+  ggplot(aes(x = member_casual, y = duration, fill = rideable_type)) +
+  geom_violin(alpha = 0.55, position = position_dodge(0.8), trim = TRUE) +
+  geom_boxplot(width = 0.18, position = position_dodge(0.8), outlier.shape = NA, alpha = 0.8) +
+  facet_grid(. ~ month) +
+  scale_y_continuous(trans = "log10", breaks = c(1, 2, 5, 10, 20, 50, 100, 200)) +
+  labs(
+    title = "Distribution of 2024 Ride Duration by Month, Membership Status, and Bike Type",
+    x = "Membership Status",
+    y = "Ride Duration (Minutes, Log10 Scale)",
+    fill = "Bike Type"
+  )
+```
+
+For 2024 rides (plotted on a log-10 scale due to right skewness), casual riders consistently take longer trips than Citi Bike members across both months and bike types, since members more often use bikes for short daily commutes. Trips in July have slightly longer median durations and wider upper tails than in January. Comparing bike types, casual riders using classic bikes have noticeably longer ride durations than those riding electric bikes, whereas among members, ride duration distributions between electric and classic bikes are very similar, with electric bikes showing slightly shorter durations in January.
