@@ -135,4 +135,69 @@ tmax_tmin_plot / snow_dist_plot
 
 In panel (i), a hexagonal heatmap of `tmax` versus `tmin` avoids severe overplotting across over 1.46 million complete pairs and reveals a tight positive linear relationship, with the highest density of daily observations concentrated between `tmin` of -5 °C to 15 °C and `tmax` of 5 °C to 25 °C. In panel (ii), the yearly ridge density plots of snowfall values between 0 and 100 mm remain remarkably consistent across all 30 years and exhibit distinct multimodal peaks near 13 mm, 25 mm, 51 mm, and 76 mm, further confirming the unit-conversion rounding from quarter-, half-, and whole-inch snowfall recordings.
 
+# Problem 2
+```{r}
+covar_raw =
+  read_csv(
+    "data/nhanes_covar.csv",
+    skip = 4,
+    na = c("", "NA"),
+    col_types = cols(
+      SEQN = col_integer(),
+      sex = col_integer(),
+      age = col_double(),
+      BMI = col_double(),
+      education = col_integer()
+    )
+  ) |>
+  clean_names()
+
+accel_raw =
+  read_csv(
+    "data/nhanes_accel.csv",
+    col_types = cols(
+      .default = col_double(),
+      SEQN = col_integer()
+    )
+  ) |>
+  clean_names()
+
+covar_df =
+  covar_raw |>
+  filter(age >= 21) |>
+  drop_na(seqn, sex, age, bmi, education) |>
+  mutate(
+    sex = factor(
+      sex,
+      levels = c(1, 2),
+      labels = c("Male", "Female")
+    ),
+    education = factor(
+      education,
+      levels = c(1, 2, 3),
+      labels = c(
+        "Less than high school",
+        "High school equivalent",
+        "More than high school"
+      ),
+      ordered = TRUE
+    )
+  )
+
+nhanes_wide =
+  covar_df |>
+  inner_join(accel_raw, by = "seqn")
+
+nhanes_long =
+  nhanes_wide |>
+  pivot_longer(
+    cols = starts_with("min"),
+    names_to = "minute",
+    names_prefix = "min",
+    names_transform = list(minute = as.integer),
+    values_to = "mims"
+  )
+```
+
+I skipped the first four metadata lines when importing `nhanes_covar.csv`, standardized column names, excluded participants younger than 21 years old (`r sum(covar_raw$age < 21, na.rm = TRUE)` participants) and those with missing demographic values (`r nrow(covar_raw) - sum(covar_raw$age < 21, na.rm = TRUE) - nrow(covar_df)` participants), and encoded `sex` and `education` as ordered factors. Merging with the accelerometer file yielded `r nrow(nhanes_wide)` eligible participants across `r ncol(nhanes_wide)` variables in wide format, and `r format(nrow(nhanes_long), big.mark = ",")` participant-minute observations in tidy long format.
 
