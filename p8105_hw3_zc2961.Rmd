@@ -201,3 +201,56 @@ nhanes_long =
 
 I skipped the first four metadata lines when importing `nhanes_covar.csv`, standardized column names, excluded participants younger than 21 years old (`r sum(covar_raw$age < 21, na.rm = TRUE)` participants) and those with missing demographic values (`r nrow(covar_raw) - sum(covar_raw$age < 21, na.rm = TRUE) - nrow(covar_df)` participants), and encoded `sex` and `education` as ordered factors. Merging with the accelerometer file yielded `r nrow(nhanes_wide)` eligible participants across `r ncol(nhanes_wide)` variables in wide format, and `r format(nrow(nhanes_long), big.mark = ",")` participant-minute observations in tidy long format.
 
+```{r}
+edu_sex_table =
+  covar_df |>
+  count(education, sex) |>
+  pivot_wider(
+    names_from = sex,
+    values_from = n
+  )
+
+kable(
+  edu_sex_table,
+  col.names = c("Education Level", "Male", "Female"),
+  caption = "Number of Men and Women in Each Education Category"
+)
+
+ggplot(covar_df, aes(x = education, y = age, fill = sex)) +
+  geom_boxplot(alpha = 0.6, width = 0.5, position = position_dodge(0.75), outlier.shape = NA) +
+  geom_jitter(aes(color = sex), position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.75), alpha = 0.7) +
+  labs(
+    title = "Age Distributions by Sex and Education Level",
+    x = "Education Level",
+    y = "Age (Years)",
+    fill = "Sex",
+    color = "Sex"
+  )
+```
+
+The largest subgroup is participants with more than a high school education (56 men and 59 women), with balanced sex counts in both the "Less than high school" (27 men, 28 women) and "More than high school" categories, whereas men outnumber women in the "High school equivalent" group (35 men vs. 23 women). The age distribution plot indicates that participants in the "More than high school" group are substantially younger overall (especially women, whose median age is around 41 years) compared with the other two education categories. In the "High school equivalent" category, women tend to be older than men, while in "Less than high school" both men and women skew toward older ages (median near 60 years).
+
+```{r}
+total_activity_df =
+  nhanes_long |>
+  group_by(seqn, sex, age, bmi, education) |>
+  summarise(
+    total_activity = sum(mims, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+ggplot(total_activity_df, aes(x = age, y = total_activity, color = sex)) +
+  geom_point(alpha = 0.65) +
+  geom_smooth(method = "loess", se = FALSE, linewidth = 1) +
+  facet_grid(. ~ education) +
+  labs(
+    title = "Total Daily Physical Activity vs. Age by Sex and Education Level",
+    x = "Age (Years)",
+    y = "Total Daily Activity (Sum of MIMS)",
+    color = "Sex"
+  )
+```
+
+Across all three education levels, total daily physical activity declines steadily with advancing age. In the "Less than high school" group, men and women exhibit comparable activity levels with a steep decline after age 60, whereas in both the "High school equivalent" and "More than high school" groups, women consistently record higher average total daily MIMS values than men of the same age. Additionally, participants in the "High school equivalent" category show a pronounced peak in total activity around ages 35 to 45 before declining at older ages.
+
+
