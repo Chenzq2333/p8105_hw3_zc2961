@@ -71,6 +71,36 @@ kable(
 
 I separated `date` into integer `year`, `month`, and `day` variables, and converted `prcp` from tenths of millimeters to millimeters (`mm`) as well as `tmax` and `tmin` from tenths of degrees Celsius to degrees Celsius (`°C`), so that precipitation, snowfall, and snow depth are all measured in `mm` and temperatures in `°C`. For snowfall, the most commonly observed value is `0` mm (`r format(snow_top$n[1], big.mark = ",")` observations), because snow does not fall on the vast majority of days across the year in New York State. The next most common values are `25` mm, `13` mm, `51` mm, and `76` mm, which correspond to historical measurements recorded in imperial inches (1.0 inch = 25.4 mm, 0.5 inch = 12.7 mm, 2.0 inches = 50.8 mm, and 3.0 inches = 76.2 mm) and subsequently rounded to the nearest millimeter.
 
+```{r}
+jan_july_tmax =
+  noaa_df |>
+  filter(month %in% c(1, 7), !is.na(tmax)) |>
+  mutate(
+    month = factor(
+      month,
+      levels = c(1, 7),
+      labels = c("January", "July")
+    )
+  ) |>
+  group_by(id, year, month) |>
+  summarise(
+    mean_tmax = mean(tmax, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+ggplot(jan_july_tmax, aes(x = year, y = mean_tmax, group = id)) +
+  geom_line(alpha = 0.15, color = "steelblue") +
+  geom_point(alpha = 0.25, size = 0.8, color = "steelblue") +
+  geom_smooth(aes(group = 1), color = "firebrick", se = FALSE, linewidth = 1) +
+  facet_grid(. ~ month) +
+  labs(
+    title = "Station-Level Average Maximum Temperature in January and July (1981-2010)",
+    x = "Year",
+    y = "Average Maximum Temperature (°C)"
+  )
+```
+
+The two-panel plot shows a clear seasonal separation: average maximum temperatures in January generally fluctuate between -10 °C and 10 °C (centered near 0 °C), whereas July average maximum temperatures stay much warmer and more tightly clustered between 20 °C and 32 °C (centered near 27 °C). Across stations, year-to-year fluctuations move in parallel, reflecting statewide warm and cold years. Several notable outliers appear in both panels, most prominently an abnormally cold July station-year observation in 1988 (`USC00308962` at 13.95 °C) and an extremely cold January station-year observation in 1982 (`USC00301723` at -13.44 °C).
 
 
 
