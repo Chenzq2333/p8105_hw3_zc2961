@@ -333,3 +333,51 @@ citibike_var_names = paste(sprintf("`%s`", names(citibike_df)), collapse = ", ")
 
 I imported the four Citi Bike files, standardized their column names, added `year` and `month` identifiers, and encoded `weekdays`, `rideable_type`, and `member_casual` as structured factors. The combined dataset contains `r format(nrow(citibike_df), big.mark = ",")` rides and `r ncol(citibike_df)` variables: `r citibike_var_names`. Across all records, `start_station_name` is missing in `r sum(is.na(citibike_df$start_station_name))` rides and `end_station_name` is missing in `r sum(is.na(citibike_df$end_station_name))` rides, while all other variables are complete.
 
+```{r}
+rides_summary_table =
+  citibike_df |>
+  count(year, month, member_casual) |>
+  pivot_wider(
+    names_from = member_casual,
+    values_from = n
+  ) |>
+  mutate(Total = Casual + Member)
+
+pct_jul20 = rides_summary_table |> filter(year == "2020", month == "July") |> mutate(pct = Member / Total * 100) |> pull(pct)
+pct_jan20 = rides_summary_table |> filter(year == "2020", month == "January") |> mutate(pct = Member / Total * 100) |> pull(pct)
+
+cas_jan20 = rides_summary_table |> filter(year == "2020", month == "January") |> pull(Casual)
+cas_jul20 = rides_summary_table |> filter(year == "2020", month == "July") |> pull(Casual)
+cas_jan24 = rides_summary_table |> filter(year == "2024", month == "January") |> pull(Casual)
+cas_jul24 = rides_summary_table |> filter(year == "2024", month == "July") |> pull(Casual)
+
+kable(
+  rides_summary_table,
+  col.names = c("Year", "Month", "Casual Riders", "Citi Bike Members", "Total Rides"),
+  format.args = list(big.mark = ","),
+  caption = "Total Number of Citi Bike Rides by Year, Month, and Membership Status"
+)
+```
+
+Ridership expanded substantially between 2020 and 2024 and exhibits strong seasonal patterns: July ride counts are roughly double to triple those in January within the same year. Citi Bike members account for the clear majority of rides in every period (ranging from `r sprintf("%.1f", pct_jul20)`% in July 2020 to `r sprintf("%.1f", pct_jan20)`% in January 2020), while casual ridership surges much more dramatically during warm summer months (growing from `r format(cas_jan20, big.mark = ",")` rides in January 2020 to `r format(cas_jul20, big.mark = ",")` in July 2020, and from `r format(cas_jan24, big.mark = ",")` in January 2024 to `r format(cas_jul24, big.mark = ",")` in July 2024).
+
+```{r}
+top5_july2024_stations =
+  citibike_df |>
+  filter(year == "2024", month == "July", !is.na(start_station_name)) |>
+  count(start_station_name, name = "n_rides", sort = TRUE) |>
+  slice_head(n = 5)
+
+station_strings = sprintf("`%s` (%d rides)", top5_july2024_stations$start_station_name, top5_july2024_stations$n_rides)
+
+top5_stations_text = paste0(paste(station_strings[1:4], collapse = ", "), ", and ", station_strings[5])
+
+kable(
+  top5_july2024_stations,
+  col.names = c("Starting Station Name", "Number of Rides"),
+  caption = "Top 5 Most Popular Starting Stations in July 2024"
+)
+```
+
+In July 2024, the five most popular starting stations are `r top5_stations_text`, reflecting high demand along the Hudson River Greenway, major commercial corridors, and transit hubs.
+
