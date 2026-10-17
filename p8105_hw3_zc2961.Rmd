@@ -279,3 +279,57 @@ hourly_activity_plot
 
 The 24-hour activity profiles follow a distinct circadian rhythm across all three education groups: activity drops to its lowest level during overnight sleeping hours (between midnight and 5:00 AM), rises sharply between 6:00 AM and 9:00 AM, remains elevated throughout the daytime (9:00 AM to 6:00 PM), and tapers off steadily during the evening. In the "High school equivalent" and "More than high school" panels, women maintain noticeably higher daytime MIMS levels than men from mid-morning through early evening, whereas in the "Less than high school" group, men and women track closely throughout the day with slightly higher midday peaks among men.
 
+# Problem 3
+```{r}
+import_citibike = function(file_path, year_val, month_val) {
+  read_csv(
+    file_path,
+    col_types = cols(
+      ride_id = col_character(),
+      rideable_type = col_character(),
+      weekdays = col_character(),
+      duration = col_double(),
+      start_station_name = col_character(),
+      end_station_name = col_character(),
+      member_casual = col_character()
+    )
+  ) |>
+    clean_names() |>
+    mutate(
+      year = factor(year_val),
+      month = factor(month_val, levels = c("January", "July"))
+    )
+}
+
+citibike_df =
+  bind_rows(
+    import_citibike("data/citibike/Jan 2020 Citi.csv", 2020, "January"),
+    import_citibike("data/citibike/July 2020 Citi.csv", 2020, "July"),
+    import_citibike("data/citibike/Jan 2024 Citi.csv", 2024, "January"),
+    import_citibike("data/citibike/July 2024 Citi.csv", 2024, "July")
+  ) |>
+  mutate(
+    weekdays = factor(
+      weekdays,
+      levels = c(
+        "Monday", "Tuesday", "Wednesday", "Thursday",
+        "Friday", "Saturday", "Sunday"
+      ),
+      ordered = TRUE
+    ),
+    rideable_type = factor(
+      rideable_type,
+      levels = c("classic_bike", "electric_bike"),
+      labels = c("Classic Bike", "Electric Bike")
+    ),
+    member_casual = factor(
+      member_casual,
+      levels = c("casual", "member"),
+      labels = c("Casual", "Member")
+    )
+  )
+citibike_var_names = paste(sprintf("`%s`", names(citibike_df)), collapse = ", ")
+```
+
+I imported the four Citi Bike files, standardized their column names, added `year` and `month` identifiers, and encoded `weekdays`, `rideable_type`, and `member_casual` as structured factors. The combined dataset contains `r format(nrow(citibike_df), big.mark = ",")` rides and `r ncol(citibike_df)` variables: `r citibike_var_names`. Across all records, `start_station_name` is missing in `r sum(is.na(citibike_df$start_station_name))` rides and `end_station_name` is missing in `r sum(is.na(citibike_df$end_station_name))` rides, while all other variables are complete.
+
