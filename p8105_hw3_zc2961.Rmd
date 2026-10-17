@@ -22,7 +22,23 @@ library(ggridges)
 library(p8105.datasets)
 
 theme_set(theme_minimal() + theme(legend.position = "bottom"))
-
 ```
+
+
+# Problem 1
+```{r}
+data("ny_noaa")
+
+noaa_missing =
+  ny_noaa |>
+  summarise(
+    prop_prcp_na = mean(is.na(prcp)),
+    prop_snow_na = mean(is.na(snow)),
+    prop_snwd_na = mean(is.na(snwd)),
+    prop_tmax_na = mean(is.na(tmax)),
+    prop_tmin_na = mean(is.na(tmin))
+  )
+```
+The `ny_noaa` dataset contains daily weather observations from `r n_distinct(ny_noaa$id)` New York state weather stations spanning from `r min(ny_noaa$date)` to `r max(ny_noaa$date)`, with `r format(nrow(ny_noaa), big.mark = ",")` rows and `r ncol(ny_noaa)` columns. Key variables include weather station identifier (`id`), observation date (`date`), precipitation in tenths of millimeters (`prcp`), snowfall in millimeters (`snow`), snow depth in millimeters (`snwd`), and maximum and minimum temperatures in tenths of degrees Celsius (`tmax` and `tmin`). Missing data is a substantial issue because many stations only record a subset of meteorological variables: `tmax` and `tmin` are each missing in `r sprintf("%.2f%%", 100 * noaa_missing$prop_tmax_na)` and `r sprintf("%.2f%%", 100 * noaa_missing$prop_tmin_na)` of observations, `snwd` is missing in `r sprintf("%.2f%%", 100 * noaa_missing$prop_snwd_na)`, `snow` is missing in `r sprintf("%.2f%%", 100 * noaa_missing$prop_snow_na)`, and `prcp` is missing in `r sprintf("%.2f%%", 100 * noaa_missing$prop_prcp_na)`.
 
 
